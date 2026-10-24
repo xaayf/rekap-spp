@@ -1,0 +1,1782 @@
+<!DOCTYPE html>
+<html lang="id" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Rekap SPP</title>
+  
+  <meta name="theme-color" content="#F2F2F7" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#000000" media="(prefers-color-scheme: dark)">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Rekap SPP">
+  <meta name="description" content="Rekap pembayaran SPP: tagihan, pembayaran, struk, dan riwayat kas.">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" type="image/png" sizes="32x32" href="/icons/favicon-32.png">
+  <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png">
+  <link rel="stylesheet" href="/app.css">
+  <script src="/lucide.min.js"></script>
+
+  <style>
+    /* iOS Momentum Scrolling & safe areas */
+    html, body {
+      max-width: 100vw;
+      overflow-x: hidden;
+      -webkit-tap-highlight-color: transparent;
+      padding-top: env(safe-area-inset-top);
+      padding-bottom: env(safe-area-inset-bottom);
+    }
+
+    .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    .no-scrollbar::-webkit-scrollbar { display: none; }
+    select, input { font-size: max(16px, 1em); } /* cegah zoom otomatis iOS */
+    input[type=number]::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    /* Custom thin scrollbar */
+    ::-webkit-scrollbar {
+      width: 4px;
+      height: 4px;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #D1D1D6;
+      border-radius: 9999px;
+    }
+    .dark ::-webkit-scrollbar-thumb {
+      background: #3A3A3C;
+    }
+    
+    .sheet-transition {
+      transition: transform 0.28s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.25s ease;
+    }
+
+    /* Print receipt formatting */
+    @media print {
+      body * {
+        visibility: hidden !important;
+      }
+      #printReceiptArea, #printReceiptArea * {
+        visibility: visible !important;
+      }
+      #printReceiptArea {
+        position: fixed !important;
+        left: 0 !important;
+        top: 0 !important;
+        width: 100% !important;
+        background: #fff !important;
+        color: #000 !important;
+        padding: 24px !important;
+        border: none !important;
+      }
+    }
+  </style>
+</head>
+<body class="h-full bg-ios-bgLight dark:bg-ios-bgDark text-[#1C1C1E] dark:text-[#F2F2F7] flex flex-col antialiased transition-colors duration-200">
+
+  <!-- ================= TOP iOS STATUS & HEADER ================= -->
+  <header class="sticky top-0 z-30 bg-ios-bgLight/85 dark:bg-ios-bgDark/85 backdrop-blur-xl border-b border-[#D1D1D6]/60 dark:border-ios-borderDark/60 transition-colors">
+    <div class="max-w-md mx-auto px-4 pt-3 pb-3 flex items-center justify-between">
+      
+      <!-- Brand & Active Year info -->
+      <div class="flex items-center space-x-2.5">
+        <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-ios-blue to-ios-indigo flex items-center justify-center text-white shadow-sm">
+          <i data-lucide="wallet" class="w-4 h-4"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-1.5">
+            <h1 class="text-[17px] font-bold tracking-tight leading-tight">Rekap SPP</h1>
+            <span id="activeAcademicYearBadge" class="text-[10px] font-semibold px-2 py-0.5 rounded-full bg-ios-blue/15 text-ios-blue dark:bg-ios-blue/25">
+              2026/2027
+            </span>
+          </div>
+          <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark font-medium" id="headerCurrentDate">Memuat...</p>
+        </div>
+      </div>
+      
+      <!-- Right actions: Dark mode switch + Quick payment -->
+      <div class="flex items-center space-x-2">
+        <button onclick="toggleDarkMode()" aria-label="Toggle Theme" class="w-8 h-8 rounded-full bg-white dark:bg-ios-cardDark border border-ios-borderLight dark:border-ios-borderDark flex items-center justify-center text-black dark:text-white shadow-sm active:scale-95 transition-transform">
+          <i id="themeIcon" data-lucide="moon" class="w-4 h-4"></i>
+        </button>
+        <button onclick="openPaymentModal()" class="w-8 h-8 rounded-full bg-ios-blue text-white flex items-center justify-center active:scale-95 transition-transform shadow-sm" title="Bayar Cepat">
+          <i data-lucide="plus" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+    </div>
+  </header>
+
+  <!-- ================= MAIN CONTAINER ================= -->
+  <main class="flex-1 w-full max-w-md mx-auto pb-28 px-4 pt-3 overflow-x-hidden">
+    
+    <!-- ================= 1. VIEW BERANDA (DASHBOARD METRIK SAJA) ================= -->
+    <section id="view-dashboard" class="space-y-4">
+      
+      <!-- Headline & Academic Year selector chip -->
+      <div class="flex items-center justify-between pt-1">
+        <div>
+          <span class="text-[11px] font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider">Ringkasan Eksekutif</span>
+          <h2 class="text-2xl font-extrabold tracking-tight">Dashboard Metrik</h2>
+        </div>
+        <button onclick="openManageYearModal()" class="text-xs bg-white dark:bg-ios-cardDark border border-ios-borderLight dark:border-ios-borderDark px-2.5 py-1.5 rounded-xl font-medium text-ios-blue flex items-center space-x-1 active:scale-95 transition">
+          <i data-lucide="calendar" class="w-3.5 h-3.5"></i>
+          <span id="activeYearLabelBtn">2026/2027</span>
+        </button>
+      </div>
+
+      <!-- Hero Card: Realisasi Kas Masuk -->
+      <div class="bg-white dark:bg-ios-cardDark rounded-3xl p-5 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark transition-colors">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-ios-grayLight dark:text-ios-grayDark">Total Penerimaan Kas Realisasi</span>
+          <span class="p-1.5 rounded-xl bg-ios-green/15 text-ios-green">
+            <i data-lucide="arrow-down-left" class="w-4 h-4"></i>
+          </span>
+        </div>
+
+        <div class="mt-1">
+          <span class="text-3xl font-extrabold tracking-tight" id="dashTotalMasuk">Rp 0</span>
+        </div>
+
+        <!-- Progress target bar -->
+        <div class="mt-4 pt-3 border-t border-ios-borderLight/60 dark:border-ios-borderDark/60">
+          <div class="flex justify-between text-xs font-medium mb-1.5">
+            <span class="text-ios-grayLight dark:text-ios-grayDark">Target Tagihan: <b id="dashTargetNominal" class="text-black dark:text-white">Rp 0</b></span>
+            <span id="dashPercentProgress" class="text-ios-blue font-bold">0%</span>
+          </div>
+          <div class="w-full bg-[#E5E5EA] dark:bg-ios-cardDarkAlt h-2.5 rounded-full overflow-hidden">
+            <div id="dashProgressBar" class="bg-gradient-to-r from-ios-blue via-ios-indigo to-ios-green h-full rounded-full transition-all duration-700" style="width: 0%"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Sub Metrics (Grid 2 Kolom) -->
+      <div class="grid grid-cols-2 gap-3">
+        <!-- Tunggakan Piutang -->
+        <div class="bg-white dark:bg-ios-cardDark rounded-2xl p-4 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-semibold text-ios-grayLight dark:text-ios-grayDark">Sisa Tunggakan</span>
+            <span class="p-1 rounded-md bg-ios-red/15 text-ios-red">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+          <p class="text-lg font-bold text-ios-red tracking-tight" id="dashTunggakan">Rp 0</p>
+          <p class="text-[10px] text-ios-grayLight dark:text-ios-grayDark mt-0.5" id="dashSiswaNunggakCount">0 siswa nunggak</p>
+        </div>
+
+        <!-- Pelunasan Siswa -->
+        <div class="bg-white dark:bg-ios-cardDark rounded-2xl p-4 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark">
+          <div class="flex items-center justify-between mb-1.5">
+            <span class="text-[11px] font-semibold text-ios-grayLight dark:text-ios-grayDark">Status Siswa Lunas</span>
+            <span class="p-1 rounded-md bg-ios-blue/15 text-ios-blue">
+              <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
+            </span>
+          </div>
+          <p class="text-lg font-bold tracking-tight" id="dashRatioLunas">0 / 0</p>
+          <p class="text-[10px] text-ios-grayLight dark:text-ios-grayDark mt-0.5" id="dashSiswaLunasPercent">0% lunas penuh</p>
+        </div>
+      </div>
+
+      <!-- Statistik Tambahan: Distribusi Metode & Info Siswa Aktif -->
+      <div class="bg-white dark:bg-ios-cardDark rounded-2xl p-4 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark space-y-3">
+        <div class="flex items-center justify-between">
+          <h3 class="text-xs font-bold uppercase tracking-wider text-ios-grayLight dark:text-ios-grayDark">Ringkasan Operasional</h3>
+          <span class="text-[11px] font-medium text-ios-blue" id="dashTotalKelasCount">0 Kelas Terdaftar</span>
+        </div>
+
+        <!-- Grid 3 info kotak -->
+        <div class="grid grid-cols-3 gap-2 text-center pt-1">
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl border border-ios-borderLight/40 dark:border-ios-borderDark/40">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Total Siswa</span>
+            <span class="text-sm font-bold text-black dark:text-white" id="dashTotalSiswaCount">0</span>
+          </div>
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl border border-ios-borderLight/40 dark:border-ios-borderDark/40">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Transaksi Sukses</span>
+            <span class="text-sm font-bold text-ios-green" id="dashTotalTxCount">0</span>
+          </div>
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl border border-ios-borderLight/40 dark:border-ios-borderDark/40">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Rerata/Siswa</span>
+            <span class="text-xs font-bold text-ios-blue" id="dashRataBayar">Rp 0</span>
+          </div>
+        </div>
+
+        <!-- Metode Pembayaran Breakdown Minimalis -->
+        <div class="pt-2">
+          <span class="text-[11px] font-semibold text-ios-grayLight dark:text-ios-grayDark block mb-2">Penerimaan Berdasarkan Kanal Bayar</span>
+          <div class="space-y-2 text-xs" id="dashChannelMetrics">
+            <!-- Rendered by JS -->
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Action: Input Bayar Cepat -->
+      <button onclick="openPaymentModal()" class="w-full bg-ios-blue hover:bg-ios-blue/90 text-white rounded-2xl py-3.5 px-4 font-semibold text-sm shadow-md active:scale-[0.99] transition flex items-center justify-center space-x-2">
+        <i data-lucide="receipt-text" class="w-4 h-4"></i>
+        <span>Proses Pembayaran Baru</span>
+      </button>
+
+    </section>
+
+    <!-- ================= 2. VIEW DATA SISWA & KELAS ================= -->
+    <section id="view-siswa" class="space-y-4 hidden">
+      <div class="pt-1 flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider">Master Data</span>
+          <h2 class="text-2xl font-extrabold tracking-tight">Siswa & Kelas</h2>
+        </div>
+        <div class="flex items-center space-x-1.5">
+          <button onclick="openAddClassModal()" class="text-xs bg-white dark:bg-ios-cardDark border border-ios-borderLight dark:border-ios-borderDark px-2.5 py-1.5 rounded-xl font-medium text-black dark:text-white flex items-center space-x-1 active:scale-95 transition">
+            <i data-lucide="folder-plus" class="w-3.5 h-3.5 text-ios-purple"></i>
+            <span>+ Kelas</span>
+          </button>
+          <button onclick="openAddStudentModal()" class="text-xs bg-ios-blue text-white px-3 py-1.5 rounded-xl font-semibold flex items-center space-x-1 shadow-sm active:scale-95 transition">
+            <i data-lucide="user-plus" class="w-3.5 h-3.5"></i>
+            <span>+ Siswa</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- iOS Search Bar -->
+      <div class="relative w-full">
+        <i data-lucide="search" class="w-4 h-4 text-ios-grayLight dark:text-ios-grayDark absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+        <input 
+          type="text" 
+          id="studentSearchInput" 
+          oninput="renderStudentList()"
+          placeholder="Cari NISN atau Nama Siswa..." 
+          class="w-full bg-[#E3E3E8]/70 dark:bg-ios-cardDark text-sm pl-9 pr-8 py-2.5 rounded-2xl text-black dark:text-white placeholder-ios-grayLight dark:placeholder-ios-grayDark focus:outline-none focus:ring-2 focus:ring-ios-blue border border-transparent dark:border-ios-borderDark transition-all"
+        />
+        <button id="clearSearchBtn" onclick="clearSearchInput()" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-ios-grayLight">
+          <i data-lucide="x" class="w-3.5 h-3.5"></i>
+        </button>
+      </div>
+
+      <!-- Segmented Class Filter Controls -->
+      <div class="flex gap-1.5 overflow-x-auto no-scrollbar py-1" id="classFilterChips">
+        <!-- Rendered by JS -->
+      </div>
+
+      <!-- Student Card List -->
+      <div class="space-y-2.5" id="studentListContainer">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- ================= 3. VIEW RIWAYAT TRANSAKSI ================= -->
+    <section id="view-riwayat" class="space-y-4 hidden">
+      <div class="pt-1 flex items-center justify-between">
+        <div>
+          <span class="text-[11px] font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider">Jurnal Transaksi</span>
+          <h2 class="text-2xl font-extrabold tracking-tight">Riwayat Kas</h2>
+        </div>
+        <button onclick="exportCSV()" class="text-xs bg-white dark:bg-ios-cardDark border border-ios-borderLight dark:border-ios-borderDark text-ios-blue px-3 py-1.5 rounded-xl font-medium flex items-center space-x-1 active:scale-95 transition">
+          <i data-lucide="download" class="w-3.5 h-3.5"></i>
+          <span>CSV</span>
+        </button>
+      </div>
+
+      <!-- Filter Kanal Bayar -->
+      <div class="flex gap-1.5 text-xs overflow-x-auto no-scrollbar">
+        <button onclick="filterPaymentMethod('ALL')" class="method-filter-chip bg-ios-blue text-white px-3 py-1.5 rounded-xl font-medium" data-method="ALL">Semua</button>
+        <button onclick="filterPaymentMethod('Tunai')" class="method-filter-chip bg-white dark:bg-ios-cardDark text-black dark:text-white border border-ios-borderLight dark:border-ios-borderDark px-3 py-1.5 rounded-xl font-medium" data-method="Tunai">Tunai</button>
+        <button onclick="filterPaymentMethod('Transfer Bank')" class="method-filter-chip bg-white dark:bg-ios-cardDark text-black dark:text-white border border-ios-borderLight dark:border-ios-borderDark px-3 py-1.5 rounded-xl font-medium" data-method="Transfer Bank">Transfer</button>
+        <button onclick="filterPaymentMethod('QRIS')" class="method-filter-chip bg-white dark:bg-ios-cardDark text-black dark:text-white border border-ios-borderLight dark:border-ios-borderDark px-3 py-1.5 rounded-xl font-medium" data-method="QRIS">QRIS</button>
+      </div>
+
+      <!-- Transaction List Items -->
+      <div class="bg-white dark:bg-ios-cardDark rounded-2xl shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark divide-y divide-ios-borderLight dark:divide-ios-borderDark overflow-hidden" id="fullTransactionList">
+        <!-- Rendered by JS -->
+      </div>
+    </section>
+
+    <!-- ================= 4. VIEW PENGATURAN & DIAGNOSTIK ================= -->
+    <section id="view-pengaturan" class="space-y-4 hidden">
+      <div class="pt-1">
+        <span class="text-[11px] font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider">Sistem & Audit</span>
+        <h2 class="text-2xl font-extrabold tracking-tight">Pengaturan & Log</h2>
+      </div>
+
+      <!-- Tampilan Preferensi Apple Style -->
+      <div class="bg-white dark:bg-ios-cardDark rounded-2xl shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark divide-y divide-ios-borderLight dark:divide-ios-borderDark overflow-hidden text-xs">
+        
+        <!-- Toggle Tema Gelap -->
+        <div class="p-3.5 flex items-center justify-between">
+          <div class="flex items-center space-x-3">
+            <div class="w-7 h-7 rounded-lg bg-ios-indigo/15 text-ios-indigo flex items-center justify-center">
+              <i data-lucide="moon" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="font-bold text-black dark:text-white text-xs">Mode Gelap (Dark Mode)</p>
+              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark">Tampilan adaptif hemat daya</p>
+            </div>
+          </div>
+          <button onclick="toggleDarkMode()" id="settingsThemeToggle" class="w-12 h-6 bg-ios-borderLight dark:bg-ios-blue rounded-full relative p-0.5 transition-colors duration-200">
+            <div class="w-5 h-5 bg-white rounded-full shadow-sm transform transition-transform duration-200 translate-x-0 dark:translate-x-6"></div>
+          </button>
+        </div>
+
+        <!-- Kelola Tahun Ajaran -->
+        <div class="p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" onclick="openManageYearModal()">
+          <div class="flex items-center space-x-3">
+            <div class="w-7 h-7 rounded-lg bg-ios-blue/15 text-ios-blue flex items-center justify-center">
+              <i data-lucide="calendar" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="font-bold text-black dark:text-white text-xs">Kelola Tahun Ajaran</p>
+              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark" id="settingsYearSummary">Aktif: 2026/2027</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-ios-grayLight"></i>
+        </div>
+
+        <!-- Kelola Daftar Kelas -->
+        <div class="p-3.5 flex items-center justify-between cursor-pointer hover:bg-black/5 dark:hover:bg-white/5" onclick="openManageClassesListModal()">
+          <div class="flex items-center space-x-3">
+            <div class="w-7 h-7 rounded-lg bg-ios-purple/15 text-ios-purple flex items-center justify-center">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="font-bold text-black dark:text-white text-xs">Kelola Master Kelas</p>
+              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark" id="settingsClassesSummary">0 Kelas terkonfigurasi</p>
+            </div>
+          </div>
+          <i data-lucide="chevron-right" class="w-4 h-4 text-ios-grayLight"></i>
+        </div>
+
+      </div>
+
+      <!-- CARD 1: DIAGNOSTIK SISTEM -->
+      <div class="bg-white dark:bg-ios-cardDark rounded-2xl p-4 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="activity" class="w-4 h-4 text-ios-green"></i>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-black dark:text-white">Diagnostik Database & Saldo</h3>
+          </div>
+          <span class="text-[10px] font-semibold text-ios-green bg-ios-green/15 px-2 py-0.5 rounded-full flex items-center space-x-1">
+            <span class="w-1.5 h-1.5 rounded-full bg-ios-green animate-pulse"></span>
+            <span>Sehat</span>
+          </span>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2 text-xs">
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Kapasitas Storage</span>
+            <span class="font-bold text-black dark:text-white" id="diagStorageSize">0.0 KB</span>
+          </div>
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Integritas Tagihan</span>
+            <span class="font-bold text-ios-green" id="diagIntegrity">100% Valid</span>
+          </div>
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Entitas Siswa</span>
+            <span class="font-bold text-black dark:text-white" id="diagTotalStudents">0 Rekaman</span>
+          </div>
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt p-2.5 rounded-xl">
+            <span class="text-[10px] text-ios-grayLight dark:text-ios-grayDark block">Log Transaksi</span>
+            <span class="font-bold text-black dark:text-white" id="diagTotalPayments">0 Entri</span>
+          </div>
+        </div>
+
+        <!-- Rekonsiliasi Audit Selisih -->
+        <div class="p-3 bg-ios-bgLight dark:bg-ios-cardDarkAlt rounded-xl text-xs space-y-1">
+          <div class="flex justify-between text-ios-grayLight dark:text-ios-grayDark">
+            <span>Formula: Target Tagihan</span>
+            <span id="diagMathTarget" class="font-mono text-black dark:text-white">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-ios-grayLight dark:text-ios-grayDark">
+            <span>Kurang: Kas Realisasi</span>
+            <span id="diagMathPaid" class="font-mono text-ios-green">- Rp 0</span>
+          </div>
+          <div class="border-t border-ios-borderLight dark:border-ios-borderDark pt-1 flex justify-between font-bold">
+            <span class="text-black dark:text-white">Selisih Piutang (Balance)</span>
+            <span id="diagMathDue" class="font-mono text-ios-red">Rp 0</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- CARD 2: SYSTEM LOGS AUDIT TRAIL -->
+      <div class="bg-white dark:bg-ios-cardDark rounded-2xl p-4 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark space-y-3">
+        <div class="flex items-center justify-between">
+          <div class="flex items-center space-x-2">
+            <i data-lucide="list-checks" class="w-4 h-4 text-ios-orange"></i>
+            <h3 class="text-xs font-bold uppercase tracking-wider text-black dark:text-white">Audit Log Aktivitas</h3>
+          </div>
+          <button onclick="clearActivityLogs()" class="text-[10px] font-semibold text-ios-red hover:underline">Hapus Log</button>
+        </div>
+
+        <!-- Log items scroll area -->
+        <div class="space-y-2 max-h-56 overflow-y-auto no-scrollbar font-mono text-[11px]" id="systemLogsList">
+          <!-- Filled by JS -->
+        </div>
+      </div>
+
+      <!-- Reset & Maintenance Action -->
+      <div class="pt-2">
+        <button onclick="resetDataDemo()" class="w-full bg-ios-red/10 hover:bg-ios-red/20 text-ios-red rounded-xl py-3 px-4 font-semibold text-xs flex items-center justify-center space-x-2 transition">
+          <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+          <span>Muat Ulang Demo & Reset Database</span>
+        </button>
+      </div>
+
+    </section>
+
+  </main>
+
+  <!-- ================= FIXED BOTTOM TAB BAR (iOS Human Interface Guidelines) ================= -->
+  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#F9F9FB]/95 dark:bg-[#161618]/95 backdrop-blur-xl border-t border-[#D1D1D6]/70 dark:border-ios-borderDark/70 shadow-lg transition-colors">
+    <div class="max-w-md mx-auto grid grid-cols-4 h-14">
+      
+      <!-- Tab 1: Dashboard Metrik -->
+      <button onclick="switchTab('tab-dashboard')" id="tab-dashboard" class="flex flex-col items-center justify-center text-ios-blue font-medium active:scale-95 transition-transform">
+        <i data-lucide="bar-chart-3" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] leading-tight">Metrik</span>
+      </button>
+
+      <!-- Tab 2: Siswa & Kelas -->
+      <button onclick="switchTab('tab-siswa')" id="tab-siswa" class="flex flex-col items-center justify-center text-ios-grayLight dark:text-ios-grayDark font-medium active:scale-95 transition-transform">
+        <i data-lucide="users" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] leading-tight">Siswa</span>
+      </button>
+
+      <!-- Tab 3: Riwayat Kas -->
+      <button onclick="switchTab('tab-riwayat')" id="tab-riwayat" class="flex flex-col items-center justify-center text-ios-grayLight dark:text-ios-grayDark font-medium active:scale-95 transition-transform">
+        <i data-lucide="receipt" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] leading-tight">Riwayat</span>
+      </button>
+
+      <!-- Tab 4: Pengaturan & Diagnostik -->
+      <button onclick="switchTab('tab-pengaturan')" id="tab-pengaturan" class="flex flex-col items-center justify-center text-ios-grayLight dark:text-ios-grayDark font-medium active:scale-95 transition-transform">
+        <i data-lucide="sliders" class="w-5 h-5 mb-0.5"></i>
+        <span class="text-[10px] leading-tight">Pengaturan</span>
+      </button>
+
+    </div>
+  </nav>
+
+  <!-- ================= MODAL: INPUT PEMBAYARAN SPP ================= -->
+  <div id="paymentModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet max-h-[92vh] flex flex-col sheet-transition transform translate-y-full text-[#1C1C1E] dark:text-[#F2F2F7]" id="paymentSheetContent">
+      
+      <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
+
+      <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
+        <div>
+          <h3 class="text-lg font-bold">Input Pembayaran SPP</h3>
+          <p class="text-xs text-ios-grayLight dark:text-ios-grayDark">Otomasi pemotongan tunggakan bulanan</p>
+        </div>
+        <button onclick="closePaymentModal()" class="w-7 h-7 rounded-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-ios-grayLight flex items-center justify-center active:scale-90">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 py-3 space-y-4 no-scrollbar">
+        <!-- Pilih Siswa -->
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Pilih Siswa</label>
+          <select id="modalStudentSelect" onchange="onStudentSelected(this.value)" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2.5 text-sm font-semibold focus:ring-2 focus:ring-ios-blue focus:outline-none">
+            <option value="">-- Pilih Siswa / NISN --</option>
+          </select>
+        </div>
+
+        <!-- Student Info Badge -->
+        <div id="modalStudentBadge" class="hidden bg-ios-bgLight dark:bg-ios-cardDarkAlt rounded-xl p-3 border border-ios-borderLight dark:border-ios-borderDark">
+          <div class="flex items-center justify-between">
+            <div>
+              <p class="text-xs font-bold" id="badgeStudentName">-</p>
+              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark" id="badgeStudentMeta">Kelas - • NISN: -</p>
+            </div>
+            <div class="text-right">
+              <span class="text-[10px] uppercase font-bold text-ios-red block">Sisa Tunggakan</span>
+              <span class="text-xs font-bold text-ios-red" id="badgeStudentDue">Rp 0</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pilih Bulan Tagihan (Checkboxes) -->
+        <div id="modalBillingSection" class="hidden">
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1.5">Pilih Bulan Yang Dibayar</label>
+          <div class="bg-ios-bgLight dark:bg-ios-cardDarkAlt rounded-xl p-2.5 border border-ios-borderLight dark:border-ios-borderDark space-y-1.5 max-h-40 overflow-y-auto" id="modalMonthsCheckboxes">
+            <!-- Dynamic Month Items -->
+          </div>
+        </div>
+
+        <!-- Nominal Diterima -->
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Nominal Diterima (Rp)</label>
+          <div class="relative">
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-sm font-bold text-ios-grayLight dark:text-ios-grayDark">Rp</span>
+            <input 
+              type="number" 
+              id="modalPaymentAmount" 
+              placeholder="0" 
+              class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl pl-10 pr-3 py-2.5 text-base font-bold focus:ring-2 focus:ring-ios-blue focus:outline-none"
+            />
+          </div>
+          <!-- Quick Amount Buttons -->
+          <div class="flex gap-1.5 mt-2 overflow-x-auto no-scrollbar" id="quickAmountChips">
+            <!-- Auto populated by JS based on SPP rate -->
+          </div>
+        </div>
+
+        <!-- Metode Pembayaran -->
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Metode Pembayaran</label>
+          <div class="grid grid-cols-3 gap-2 text-xs font-semibold">
+            <label class="border border-ios-borderLight dark:border-ios-borderDark rounded-xl p-2 flex flex-col items-center justify-center text-center cursor-pointer has-[:checked]:border-ios-blue has-[:checked]:bg-ios-blue/10">
+              <input type="radio" name="payMethod" value="Tunai" checked class="hidden">
+              <i data-lucide="banknote" class="w-4 h-4 mb-1 text-ios-green"></i>
+              <span>Tunai</span>
+            </label>
+            <label class="border border-ios-borderLight dark:border-ios-borderDark rounded-xl p-2 flex flex-col items-center justify-center text-center cursor-pointer has-[:checked]:border-ios-blue has-[:checked]:bg-ios-blue/10">
+              <input type="radio" name="payMethod" value="Transfer Bank" class="hidden">
+              <i data-lucide="building-2" class="w-4 h-4 mb-1 text-ios-blue"></i>
+              <span>Transfer</span>
+            </label>
+            <label class="border border-ios-borderLight dark:border-ios-borderDark rounded-xl p-2 flex flex-col items-center justify-center text-center cursor-pointer has-[:checked]:border-ios-blue has-[:checked]:bg-ios-blue/10">
+              <input type="radio" name="payMethod" value="QRIS" class="hidden">
+              <i data-lucide="qr-code" class="w-4 h-4 mb-1 text-ios-orange"></i>
+              <span>QRIS</span>
+            </label>
+          </div>
+        </div>
+
+        <!-- Catatan -->
+        <div>
+          <input 
+            type="text" 
+            id="modalPaymentNotes" 
+            placeholder="Catatan / No. Ref Transaksi (Opsional)" 
+            class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2.5 text-xs focus:outline-none"
+          />
+        </div>
+
+      </div>
+
+      <!-- Submit Button -->
+      <div class="pt-3 border-t border-ios-borderLight dark:border-ios-borderDark">
+        <button onclick="processPayment()" id="btnSubmitPayment" class="w-full bg-ios-blue text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.99] transition shadow-sm flex items-center justify-center space-x-2">
+          <i data-lucide="check" class="w-4 h-4"></i>
+          <span>Simpan & Buat Struk</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= MODAL: TAMBAH SISWA BARU ================= -->
+  <div id="addStudentModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
+      <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
+
+      <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
+        <div>
+          <h3 class="text-lg font-bold">Tambah Siswa Baru</h3>
+          <p class="text-xs text-ios-grayLight dark:text-ios-grayDark">Daftarkan peserta didik ke database</p>
+        </div>
+        <button onclick="closeAddStudentModal()" class="w-7 h-7 rounded-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-ios-grayLight flex items-center justify-center active:scale-90">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="py-3 space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Nama Lengkap Siswa</label>
+          <input type="text" id="newStudentName" placeholder="Contoh: Muhammad Rafli" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-ios-blue">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">NISN / Nomor Induk</label>
+          <input type="text" id="newStudentNisn" placeholder="Contoh: 0098765432" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-ios-blue">
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Pilih Kelas</label>
+          <select id="newStudentClass" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-ios-blue">
+            <!-- Classes loaded via JS -->
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Tarif SPP Per Bulan (Rp)</label>
+          <input type="number" id="newStudentMonthlyFee" value="150000" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2 text-sm font-bold focus:outline-none focus:ring-2 focus:ring-ios-blue">
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-ios-borderLight dark:border-ios-borderDark">
+        <button onclick="saveNewStudent()" class="w-full bg-ios-blue text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.99] transition shadow-sm flex items-center justify-center space-x-2">
+          <i data-lucide="user-check" class="w-4 h-4"></i>
+          <span>Simpan Data Siswa</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: TAMBAH KELAS ================= -->
+  <div id="addClassModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
+      <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
+
+      <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
+        <div>
+          <h3 class="text-lg font-bold">Tambah Kelas Baru</h3>
+          <p class="text-xs text-ios-grayLight dark:text-ios-grayDark">Tambahkan rombel kelas baru</p>
+        </div>
+        <button onclick="closeAddClassModal()" class="w-7 h-7 rounded-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-ios-grayLight flex items-center justify-center active:scale-90">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="py-3 space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Nama Rombel / Kelas</label>
+          <input type="text" id="newClassName" placeholder="Contoh: X RPL 1 atau XII MIPA 3" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-ios-blue">
+        </div>
+      </div>
+
+      <div class="pt-3 border-t border-ios-borderLight dark:border-ios-borderDark">
+        <button onclick="saveNewClass()" class="w-full bg-ios-blue text-white rounded-xl py-3 font-semibold text-sm active:scale-[0.99] transition shadow-sm flex items-center justify-center space-x-2">
+          <i data-lucide="plus-circle" class="w-4 h-4"></i>
+          <span>Simpan Kelas</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: KELOLA MASTER KELAS LIST ================= -->
+  <div id="manageClassesListModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col max-h-[85vh] text-[#1C1C1E] dark:text-[#F2F2F7]">
+      <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
+
+      <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
+        <div>
+          <h3 class="text-lg font-bold">Daftar Rombel Kelas</h3>
+          <p class="text-xs text-ios-grayLight dark:text-ios-grayDark">Kelola kelas terdaftar</p>
+        </div>
+        <button onclick="closeManageClassesListModal()" class="w-7 h-7 rounded-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-ios-grayLight flex items-center justify-center active:scale-90">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="overflow-y-auto flex-1 py-3 space-y-2 no-scrollbar" id="classListContainer">
+        <!-- Rendered by JS -->
+      </div>
+
+      <div class="pt-3 border-t border-ios-borderLight dark:border-ios-borderDark">
+        <button onclick="closeManageClassesListModal(); openAddClassModal();" class="w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt hover:bg-black/5 text-ios-blue rounded-xl py-2.5 font-semibold text-xs flex items-center justify-center space-x-1.5">
+          <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+          <span>Tambah Kelas Baru</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: KELOLA TAHUN AJARAN ================= -->
+  <div id="manageYearModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
+      <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
+
+      <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
+        <div>
+          <h3 class="text-lg font-bold">Pilih & Kelola Tahun Ajaran</h3>
+          <p class="text-xs text-ios-grayLight dark:text-ios-grayDark">Siklus pembukuan SPP aktif</p>
+        </div>
+        <button onclick="closeManageYearModal()" class="w-7 h-7 rounded-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-ios-grayLight flex items-center justify-center active:scale-90">
+          <i data-lucide="x" class="w-4 h-4"></i>
+        </button>
+      </div>
+
+      <div class="py-3 space-y-3">
+        <div>
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1.5">Tahun Ajaran Aktif</label>
+          <div class="space-y-1.5" id="academicYearList">
+            <!-- Populated by JS -->
+          </div>
+        </div>
+
+        <div class="pt-2 border-t border-ios-borderLight dark:border-ios-borderDark">
+          <label class="block text-xs font-bold text-ios-grayLight dark:text-ios-grayDark uppercase tracking-wider mb-1">Tambah Tahun Ajaran</label>
+          <div class="flex space-x-2">
+            <input type="text" id="newYearInput" placeholder="Contoh: 2027/2028" class="flex-1 bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight dark:border-ios-borderDark rounded-xl px-3 py-2 text-xs font-semibold focus:outline-none">
+            <button onclick="addNewAcademicYear()" class="bg-ios-blue text-white px-3 py-2 rounded-xl text-xs font-semibold active:scale-95 transition">Tambah</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= MODAL: STRUK BUKTI PEMBAYARAN THERMAL ================= -->
+  <div id="receiptModal" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm hidden flex items-center justify-center p-4">
+    <div class="w-full max-w-sm bg-white dark:bg-ios-cardDark rounded-3xl p-5 shadow-2xl flex flex-col max-h-[92vh] text-[#1C1C1E] dark:text-[#F2F2F7]">
+      
+      <!-- Receipt Box -->
+      <div id="printReceiptArea" class="bg-[#FCFCFD] text-[#1C1C1E] border border-dashed border-[#C6C6C8] rounded-2xl p-4 font-mono text-xs space-y-3">
+        <div class="text-center pb-2 border-b border-dashed border-[#C6C6C8]">
+          <h4 class="font-extrabold text-sm tracking-tight">SIAKAD SPP NUSANTARA</h4>
+          <p class="text-[10px] text-gray-500">Bukti Resmi Transaksi Kas Masuk</p>
+          <p class="text-[9px] text-gray-400 mt-0.5" id="recDate">--</p>
+        </div>
+
+        <div class="space-y-1 text-[11px]">
+          <div class="flex justify-between">
+            <span class="text-gray-500">No. Kwitansi:</span>
+            <span class="font-bold font-mono" id="recTxId">TX-0000</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Siswa / NISN:</span>
+            <span class="font-bold text-right" id="recStudent">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Kelas / TA:</span>
+            <span id="recClass">--</span>
+          </div>
+          <div class="flex justify-between">
+            <span class="text-gray-500">Metode Bayar:</span>
+            <span id="recMethod">Tunai</span>
+          </div>
+        </div>
+
+        <!-- Months Itemized -->
+        <div class="border-t border-b border-dashed border-[#C6C6C8] py-2 space-y-1 text-[11px]" id="recItems">
+          <!-- Populated by JS -->
+        </div>
+
+        <div class="space-y-1 text-[11px] pt-1">
+          <div class="flex justify-between font-bold text-sm">
+            <span>TOTAL DIBAYAR:</span>
+            <span id="recTotal">Rp 0</span>
+          </div>
+          <div class="flex justify-between text-[10px] text-gray-500">
+            <span>Sisa Tunggakan:</span>
+            <span id="recRemainingDue" class="font-semibold text-red-600">Rp 0</span>
+          </div>
+        </div>
+
+        <div class="text-center pt-2 border-t border-dashed border-[#C6C6C8] text-[9px] text-gray-400 leading-tight">
+          <p>Terima kasih atas pembayaran SPP tepat waktu.</p>
+          <p class="italic mt-0.5">Disimpan sebagai bukti pembayaran sah.</p>
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="grid grid-cols-2 gap-2 mt-4">
+        <button onclick="window.print()" class="bg-ios-bgLight dark:bg-ios-cardDarkAlt hover:bg-black/5 text-black dark:text-white rounded-xl py-2.5 font-semibold text-xs flex items-center justify-center space-x-1.5 active:scale-95 transition">
+          <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+          <span>Cetak Thermal</span>
+        </button>
+        <button onclick="closeReceiptModal()" class="bg-ios-blue text-white rounded-xl py-2.5 font-semibold text-xs active:scale-95 transition flex items-center justify-center">
+          <span>Selesai</span>
+        </button>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= INLINE TOAST BANNER (iOS NOTIFICATION) ================= -->
+  <div id="toastNotification" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-[#1C1C1E]/95 dark:bg-white/95 text-white dark:text-[#1C1C1E] px-4 py-2.5 rounded-2xl shadow-xl flex items-center space-x-2 text-xs font-semibold transition-all duration-300 opacity-0 pointer-events-none -translate-y-4">
+    <i data-lucide="check-circle" class="w-4 h-4 text-ios-green"></i>
+    <span id="toastMessage">Operasi Berhasil</span>
+  </div>
+
+  <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
+  <script>
+    // --- PWA: service worker ---
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => navigator.serviceWorker.register('/sw.js').catch(() => {}));
+    }
+
+    // --- Initial Constants & Master Seed ---
+    const DEFAULT_ACADEMIC_YEARS = ['2025/2026', '2026/2027', '2027/2028'];
+    const DEFAULT_CLASSES = ['X IPA 1', 'XI IPA 2', 'XII IPS 1', 'XII IPS 2'];
+
+    const MONTHS_TEMPLATE = [
+      { id: '07', name: 'Juli' },
+      { id: '08', name: 'Agustus' },
+      { id: '09', name: 'September' },
+      { id: '10', name: 'Oktober' },
+      { id: '11', name: 'November' },
+      { id: '12', name: 'Desember' },
+      { id: '01', name: 'Januari' },
+      { id: '02', name: 'Februari' },
+      { id: '03', name: 'Maret' },
+      { id: '04', name: 'April' },
+      { id: '05', name: 'Mei' },
+      { id: '06', name: 'Juni' }
+    ];
+
+    const INITIAL_STUDENTS = [
+      { id: 'STD001', nisn: '0054321980', name: 'Rizky Pratama', class: 'XII IPS 1', monthlyFee: 150000, paidRecords: { '2026/2027': ['07', '08', '09'] } },
+      { id: 'STD002', nisn: '0065432101', name: 'Ahmad Fauzi', class: 'XI IPA 2', monthlyFee: 150000, paidRecords: { '2026/2027': ['07', '08', '09', '10', '11', '12'] } },
+      { id: 'STD003', nisn: '0071239872', name: 'Siti Nurhaliza', class: 'X IPA 1', monthlyFee: 150000, paidRecords: { '2026/2027': ['07'] } },
+      { id: 'STD004', nisn: '0089876543', name: 'Budi Santoso', class: 'XII IPS 1', monthlyFee: 150000, paidRecords: { '2026/2027': ['07', '08', '09', '10', '11', '12', '01', '02', '03', '04', '05', '06'] } },
+      { id: 'STD005', nisn: '0091122334', name: 'Clarissa Maharani', class: 'XI IPA 2', monthlyFee: 150000, paidRecords: { '2026/2027': [] } },
+      { id: 'STD006', nisn: '0098877665', name: 'Dimas Anggara', class: 'XII IPS 2', monthlyFee: 150000, paidRecords: { '2026/2027': ['07', '08'] } }
+    ];
+
+    const INITIAL_TRANSACTIONS = [
+      {
+        id: 'TX-8921',
+        academicYear: '2026/2027',
+        studentId: 'STD001',
+        studentName: 'Rizky Pratama',
+        class: 'XII IPS 1',
+        date: '2026-10-24 09:15',
+        amount: 450000,
+        method: 'Tunai',
+        months: ['Juli', 'Agustus', 'September'],
+        notes: 'Pelunasan SPP 3 bulan'
+      },
+      {
+        id: 'TX-8920',
+        academicYear: '2026/2027',
+        studentId: 'STD002',
+        studentName: 'Ahmad Fauzi',
+        class: 'XI IPA 2',
+        date: '2026-10-23 14:30',
+        amount: 300000,
+        method: 'Transfer Bank',
+        months: ['November', 'Desember'],
+        notes: 'Transfer via BCA'
+      },
+      {
+        id: 'TX-8919',
+        academicYear: '2026/2027',
+        studentId: 'STD004',
+        studentName: 'Budi Santoso',
+        class: 'XII IPS 1',
+        date: '2026-10-22 11:05',
+        amount: 900000,
+        method: 'QRIS',
+        months: ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni'],
+        notes: 'Pelunasan SPP semester genap'
+      }
+    ];
+
+    const INITIAL_LOGS = [
+      { id: 'L-1', time: '2026-10-24 09:15:20', type: 'PAYMENT', msg: 'Transaksi TX-8921 sebesar Rp 450.000 (Rizky Pratama) berhasil dicatat.' },
+      { id: 'L-2', time: '2026-10-23 14:30:12', type: 'PAYMENT', msg: 'Transaksi TX-8920 sebesar Rp 300.000 (Ahmad Fauzi) terverifikasi.' },
+      { id: 'L-3', time: '2026-10-20 08:00:00', type: 'SYSTEM', msg: 'Tahun ajaran aktif diatur ke 2026/2027.' }
+    ];
+
+    // --- State Storage ---
+    let academicYears = JSON.parse(localStorage.getItem('siakad_years')) || DEFAULT_ACADEMIC_YEARS;
+    let activeYear = localStorage.getItem('siakad_active_year') || '2026/2027';
+    let classes = JSON.parse(localStorage.getItem('siakad_classes')) || DEFAULT_CLASSES;
+    let students = JSON.parse(localStorage.getItem('siakad_students')) || INITIAL_STUDENTS;
+    let transactions = JSON.parse(localStorage.getItem('siakad_txs')) || INITIAL_TRANSACTIONS;
+    let activityLogs = JSON.parse(localStorage.getItem('siakad_logs')) || INITIAL_LOGS;
+
+    let currentFilterClass = 'ALL';
+    let currentFilterMethod = 'ALL';
+
+    function saveState() {
+      localStorage.setItem('siakad_years', JSON.stringify(academicYears));
+      localStorage.setItem('siakad_active_year', activeYear);
+      localStorage.setItem('siakad_classes', JSON.stringify(classes));
+      localStorage.setItem('siakad_students', JSON.stringify(students));
+      localStorage.setItem('siakad_txs', JSON.stringify(transactions));
+      localStorage.setItem('siakad_logs', JSON.stringify(activityLogs));
+    }
+
+    // Waktu lokal perangkat (bukan UTC) -> 'YYYY-MM-DD HH:mm[:ss]'
+    function localStamp(len) {
+      const d = new Date();
+      const p = n => String(n).padStart(2, '0');
+      const str = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+      return str.substring(0, len);
+    }
+
+    // Escape HTML untuk data buatan user
+    function esc(v) {
+      return String(v ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+    }
+
+    function addLog(type, msg) {
+      const timeStr = localStamp(19);
+      activityLogs.unshift({
+        id: 'L-' + Date.now(),
+        time: timeStr,
+        type: type,
+        msg: msg
+      });
+      if (activityLogs.length > 80) activityLogs.pop();
+      saveState();
+      renderLogs();
+      updateDiagnostics();
+    }
+
+    function clearActivityLogs() {
+      activityLogs = [];
+      saveState();
+      renderLogs();
+      showToast('Log aktivitas dibersihkan');
+    }
+
+    function resetDataDemo() {
+      academicYears = [...DEFAULT_ACADEMIC_YEARS];
+      activeYear = '2026/2027';
+      classes = [...DEFAULT_CLASSES];
+      students = JSON.parse(JSON.stringify(INITIAL_STUDENTS));
+      transactions = JSON.parse(JSON.stringify(INITIAL_TRANSACTIONS));
+      activityLogs = JSON.parse(JSON.stringify(INITIAL_LOGS));
+      saveState();
+      renderAll();
+      showToast('Sistem berhasil dimuat ulang ke data default!');
+    }
+
+    // Currency Formatter Helper
+    function formatIDR(amount) {
+      return new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+        maximumFractionDigits: 0
+      }).format(amount);
+    }
+
+    // --- Dark Mode Handler ---
+    function initTheme() {
+      const isDark = localStorage.getItem('siakad_theme') === 'dark' || 
+        (!('siakad_theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      applyTheme(isDark);
+    }
+
+    function toggleDarkMode() {
+      const isDark = document.documentElement.classList.contains('dark');
+      applyTheme(!isDark);
+    }
+
+    function applyTheme(isDark) {
+      const themeIcon = document.getElementById('themeIcon');
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+        localStorage.setItem('siakad_theme', 'dark');
+        if (themeIcon) themeIcon.setAttribute('data-lucide', 'sun');
+      } else {
+        document.documentElement.classList.remove('dark');
+        localStorage.setItem('siakad_theme', 'light');
+        if (themeIcon) themeIcon.setAttribute('data-lucide', 'moon');
+      }
+      lucide.createIcons();
+    }
+
+    // --- App Lifecycle Initialization ---
+    window.onload = function() {
+      initTheme();
+
+      const now = new Date();
+      const options = { weekday: 'long', day: 'numeric', month: 'short', year: 'numeric' };
+      document.getElementById('headerCurrentDate').textContent = now.toLocaleDateString('id-ID', options);
+
+      updateAcademicYearBadges();
+      populateClassSelects();
+      populateStudentDropdown();
+      renderAll();
+      lucide.createIcons();
+    };
+
+    function renderAll() {
+      updateAcademicYearBadges();
+      renderDashboardMetrics();
+      renderClassFilterChips();
+      renderStudentList();
+      renderFullTransactions();
+      renderLogs();
+      updateDiagnostics();
+      lucide.createIcons();
+    }
+
+    // --- Tab Switching Logic (iOS Human Interface) ---
+    function switchTab(activeTabId) {
+      const views = {
+        'tab-dashboard': 'view-dashboard',
+        'tab-siswa': 'view-siswa',
+        'tab-riwayat': 'view-riwayat',
+        'tab-pengaturan': 'view-pengaturan'
+      };
+
+      Object.keys(views).forEach(tabKey => {
+        const viewElem = document.getElementById(views[tabKey]);
+        const tabBtn = document.getElementById(tabKey);
+        
+        if (tabKey === activeTabId) {
+          viewElem.classList.remove('hidden');
+          tabBtn.classList.remove('text-ios-grayLight', 'dark:text-ios-grayDark');
+          tabBtn.classList.add('text-ios-blue');
+        } else {
+          viewElem.classList.add('hidden');
+          tabBtn.classList.remove('text-ios-blue');
+          tabBtn.classList.add('text-ios-grayLight', 'dark:text-ios-grayDark');
+        }
+      });
+      lucide.createIcons();
+    }
+
+    // --- 1. DASHBOARD METRICS CALCULATION (MAIN MENU) ---
+    function renderDashboardMetrics() {
+      let targetTotal = 0;
+      let totalRealisasi = 0;
+      let siswaLunasCount = 0;
+      let siswaNunggakCount = 0;
+      let channelTotals = { 'Tunai': 0, 'Transfer Bank': 0, 'QRIS': 0 };
+
+      students.forEach(student => {
+        const fee = student.monthlyFee || 150000;
+        const studentTarget = fee * MONTHS_TEMPLATE.length;
+        targetTotal += studentTarget;
+
+        const paidMonths = (student.paidRecords && student.paidRecords[activeYear]) || [];
+        const studentPaid = paidMonths.length * fee;
+        totalRealisasi += studentPaid;
+
+        if (paidMonths.length === MONTHS_TEMPLATE.length) {
+          siswaLunasCount++;
+        } else {
+          siswaNunggakCount++;
+        }
+      });
+
+      // Filter transactions for active academic year
+      const activeYearTxs = transactions.filter(t => !t.academicYear || t.academicYear === activeYear);
+      activeYearTxs.forEach(t => {
+        if (channelTotals[t.method] !== undefined) {
+          channelTotals[t.method] += t.amount;
+        }
+      });
+
+      const tunggakanTotal = Math.max(0, targetTotal - totalRealisasi);
+      const percentage = targetTotal > 0 ? Math.round((totalRealisasi / targetTotal) * 100) : 0;
+      const lunasPercentage = students.length > 0 ? Math.round((siswaLunasCount / students.length) * 100) : 0;
+      const rataRataPerSiswa = students.length > 0 ? Math.round(totalRealisasi / students.length) : 0;
+
+      // Update DOM values
+      document.getElementById('dashTotalMasuk').textContent = formatIDR(totalRealisasi);
+      document.getElementById('dashTargetNominal').textContent = formatIDR(targetTotal);
+      document.getElementById('dashPercentProgress').textContent = `${percentage}%`;
+      document.getElementById('dashProgressBar').style.width = `${Math.min(100, percentage)}%`;
+
+      document.getElementById('dashTunggakan').textContent = formatIDR(tunggakanTotal);
+      document.getElementById('dashSiswaNunggakCount').textContent = `${siswaNunggakCount} siswa ada tagihan`;
+
+      document.getElementById('dashRatioLunas').textContent = `${siswaLunasCount} / ${students.length}`;
+      document.getElementById('dashSiswaLunasPercent').textContent = `${lunasPercentage}% lunas penuh`;
+
+      document.getElementById('dashTotalSiswaCount').textContent = students.length;
+      document.getElementById('dashTotalKelasCount').textContent = `${classes.length} Rombel Kelas`;
+      document.getElementById('dashTotalTxCount').textContent = activeYearTxs.length;
+      document.getElementById('dashRataBayar').textContent = formatIDR(rataRataPerSiswa);
+
+      // Render channel breakdown in Dashboard
+      const channelContainer = document.getElementById('dashChannelMetrics');
+      const grandSum = Object.values(channelTotals).reduce((a, b) => a + b, 0) || 1;
+      
+      channelContainer.innerHTML = Object.keys(channelTotals).map(channel => {
+        const val = channelTotals[channel];
+        const pct = Math.round((val / grandSum) * 100);
+        const icon = channel === 'Tunai' ? 'banknote' : channel === 'QRIS' ? 'qr-code' : 'building-2';
+        const color = channel === 'Tunai' ? 'text-ios-green' : channel === 'QRIS' ? 'text-ios-orange' : 'text-ios-blue';
+
+        return `
+          <div>
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="flex items-center space-x-1.5 font-medium">
+                <i data-lucide="${icon}" class="w-3.5 h-3.5 ${color}"></i>
+                <span>${channel}</span>
+              </span>
+              <span class="font-bold">${formatIDR(val)} <span class="text-ios-grayLight font-normal">(${pct}%)</span></span>
+            </div>
+            <div class="w-full bg-[#E5E5EA] dark:bg-ios-cardDarkAlt h-1.5 rounded-full overflow-hidden">
+              <div class="bg-ios-blue h-full rounded-full transition-all duration-500" style="width: ${pct}%"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- 2. MASTER KELAS & FILTER CHIPS ---
+    function renderClassFilterChips() {
+      const container = document.getElementById('classFilterChips');
+      const allBtnClass = currentFilterClass === 'ALL' 
+        ? 'bg-ios-blue text-white shadow-sm' 
+        : 'bg-white dark:bg-ios-cardDark text-black dark:text-white border border-ios-borderLight dark:border-ios-borderDark';
+
+      let html = `
+        <button onclick="filterByClass('ALL')" class="shrink-0 text-xs px-3 py-1.5 rounded-xl font-semibold transition active:scale-95 ${allBtnClass}">
+          Semua Kelas
+        </button>
+      `;
+
+      classes.forEach(c => {
+        const active = currentFilterClass === c;
+        const btnClass = active 
+          ? 'bg-ios-blue text-white shadow-sm' 
+          : 'bg-white dark:bg-ios-cardDark text-black dark:text-white border border-ios-borderLight dark:border-ios-borderDark';
+        html += `
+          <button onclick="filterByClass(${esc(JSON.stringify(c))})" class="shrink-0 text-xs px-3 py-1.5 rounded-xl font-semibold transition active:scale-95 ${btnClass}">
+            ${esc(c)}
+          </button>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    function filterByClass(kelas) {
+      currentFilterClass = kelas;
+      renderClassFilterChips();
+      renderStudentList();
+    }
+
+    function populateClassSelects() {
+      const studentClassSelect = document.getElementById('newStudentClass');
+      if (studentClassSelect) {
+        studentClassSelect.innerHTML = classes.map(c => `<option value="${esc(c)}">${esc(c)}</option>`).join('');
+      }
+
+      // Settings summary
+      document.getElementById('settingsClassesSummary').textContent = `${classes.length} Kelas terdaftar`;
+    }
+
+    function openAddClassModal() {
+      document.getElementById('newClassName').value = '';
+      document.getElementById('addClassModal').classList.remove('hidden');
+    }
+
+    function closeAddClassModal() {
+      document.getElementById('addClassModal').classList.add('hidden');
+    }
+
+    function saveNewClass() {
+      const name = document.getElementById('newClassName').value.trim();
+      if (!name) {
+        showToast('Nama kelas tidak boleh kosong!');
+        return;
+      }
+      if (classes.includes(name)) {
+        showToast('Kelas tersebut sudah ada!');
+        return;
+      }
+
+      classes.push(name);
+      saveState();
+      populateClassSelects();
+      renderClassFilterChips();
+      closeAddClassModal();
+      addLog('MASTER', `Menambahkan kelas baru: ${name}`);
+      showToast(`Kelas "${name}" berhasil ditambahkan`);
+    }
+
+    function openManageClassesListModal() {
+      renderClassesListInModal();
+      document.getElementById('manageClassesListModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeManageClassesListModal() {
+      document.getElementById('manageClassesListModal').classList.add('hidden');
+    }
+
+    function renderClassesListInModal() {
+      const container = document.getElementById('classListContainer');
+      container.innerHTML = classes.map((c, idx) => {
+        const studentCount = students.filter(s => s.class === c).length;
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl bg-ios-bgLight dark:bg-ios-cardDarkAlt text-xs font-semibold">
+            <div>
+              <span class="text-black dark:text-white font-bold">${esc(c)}</span>
+              <span class="text-ios-grayLight dark:text-ios-grayDark block text-[10px]">${studentCount} Siswa terdaftar</span>
+            </div>
+            ${classes.length > 1 ? `
+              <button onclick="deleteClass(${esc(JSON.stringify(c))})" class="text-ios-red p-1 rounded hover:bg-ios-red/10 active:scale-90 transition">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            ` : ''}
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function deleteClass(className) {
+      const count = students.filter(s => s.class === className).length;
+      if (count > 0) {
+        showToast(`Tidak bisa menghapus! Masih ada ${count} siswa di kelas ini.`);
+        return;
+      }
+      classes = classes.filter(c => c !== className);
+      if (currentFilterClass === className) currentFilterClass = 'ALL';
+      saveState();
+      populateClassSelects();
+      renderClassFilterChips();
+      renderClassesListInModal();
+      addLog('MASTER', `Menghapus kelas ${className}`);
+      showToast(`Kelas ${className} dihapus`);
+    }
+
+    // --- 3. MASTER SISWA (TAMBAH & LIST) ---
+    function openAddStudentModal() {
+      document.getElementById('newStudentName').value = '';
+      document.getElementById('newStudentNisn').value = '';
+      document.getElementById('newStudentMonthlyFee').value = 150000;
+      populateClassSelects();
+      document.getElementById('addStudentModal').classList.remove('hidden');
+    }
+
+    function closeAddStudentModal() {
+      document.getElementById('addStudentModal').classList.add('hidden');
+    }
+
+    function saveNewStudent() {
+      const name = document.getElementById('newStudentName').value.trim();
+      const nisn = document.getElementById('newStudentNisn').value.trim();
+      const kelas = document.getElementById('newStudentClass').value;
+      const fee = parseInt(document.getElementById('newStudentMonthlyFee').value) || 150000;
+
+      if (!name || !nisn) {
+        showToast('Nama dan NISN wajib diisi!');
+        return;
+      }
+
+      const exists = students.some(s => s.nisn === nisn);
+      if (exists) {
+        showToast('NISN sudah terdaftar!');
+        return;
+      }
+
+      const newStudent = {
+        id: 'STD' + (Date.now().toString().slice(-5)),
+        nisn: nisn,
+        name: name,
+        class: kelas,
+        monthlyFee: fee,
+        paidRecords: {}
+      };
+      newStudent.paidRecords[activeYear] = [];
+
+      students.unshift(newStudent);
+      saveState();
+      populateStudentDropdown();
+      closeAddStudentModal();
+      renderAll();
+      addLog('STUDENT', `Menambahkan siswa baru: ${name} (${kelas})`);
+      showToast(`Siswa "${name}" berhasil ditambahkan`);
+    }
+
+    function renderStudentList() {
+      const container = document.getElementById('studentListContainer');
+      const searchQuery = (document.getElementById('studentSearchInput')?.value || '').toLowerCase().trim();
+      const clearBtn = document.getElementById('clearSearchBtn');
+
+      if (searchQuery.length > 0) {
+        clearBtn.classList.remove('hidden');
+      } else {
+        clearBtn.classList.add('hidden');
+      }
+
+      const filtered = students.filter(student => {
+        const matchesClass = (currentFilterClass === 'ALL' || student.class === currentFilterClass);
+        const matchesSearch = student.name.toLowerCase().includes(searchQuery) || student.nisn.includes(searchQuery);
+        return matchesClass && matchesSearch;
+      });
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="bg-white dark:bg-ios-cardDark rounded-2xl p-6 text-center text-xs text-ios-grayLight dark:text-ios-grayDark shadow-ios-card">Tidak ada data siswa ditemukan.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(student => {
+        const paidThisYear = (student.paidRecords && student.paidRecords[activeYear]) || [];
+        const unpaidMonthsCount = MONTHS_TEMPLATE.length - paidThisYear.length;
+        const fee = student.monthlyFee || 150000;
+        const totalDue = unpaidMonthsCount * fee;
+        const isLunas = unpaidMonthsCount === 0;
+
+        return `
+          <div class="bg-white dark:bg-ios-cardDark rounded-2xl p-4 shadow-ios-card dark:shadow-ios-card-dark border border-ios-borderLight dark:border-ios-borderDark flex flex-col space-y-2.5">
+            <div class="flex items-center justify-between">
+              <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 rounded-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-black dark:text-white flex items-center justify-center font-bold text-xs border border-ios-borderLight dark:border-ios-borderDark">
+                  ${esc(student.name.charAt(0))}
+                </div>
+                <div>
+                  <h4 class="text-xs font-bold leading-tight text-black dark:text-white">${esc(student.name)}</h4>
+                  <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark">NISN: ${esc(student.nisn)} • ${esc(student.class)}</p>
+                </div>
+              </div>
+              <div>
+                ${isLunas 
+                  ? `<span class="text-[10px] font-bold text-ios-green bg-ios-green/15 px-2 py-0.5 rounded-full">LUNAS</span>`
+                  : `<span class="text-[10px] font-bold text-ios-red bg-ios-red/15 px-2 py-0.5 rounded-full">TUNGGAK ${unpaidMonthsCount} BLN</span>`
+                }
+              </div>
+            </div>
+
+            <!-- Month badges -->
+            <div class="pt-1 flex flex-wrap gap-1">
+              ${MONTHS_TEMPLATE.map(m => {
+                const isPaid = paidThisYear.includes(m.id);
+                return `
+                  <span class="text-[9px] px-1.5 py-0.5 rounded-md font-semibold ${isPaid ? 'bg-ios-green/15 text-ios-green' : 'bg-ios-bgLight dark:bg-ios-cardDarkAlt text-ios-grayLight'}">
+                    ${m.name.slice(0, 3)} ${isPaid ? '✓' : ''}
+                  </span>
+                `;
+              }).join('')}
+            </div>
+
+            <!-- Action footer -->
+            <div class="pt-2 border-t border-ios-borderLight/60 dark:border-ios-borderDark/60 flex items-center justify-between text-xs">
+              <span class="text-[11px] text-ios-grayLight dark:text-ios-grayDark">Tunggakan: <b class="${isLunas ? 'text-ios-green' : 'text-ios-red'}">${isLunas ? 'Rp 0' : formatIDR(totalDue)}</b></span>
+              
+              ${!isLunas ? `
+                <button onclick="openPaymentForStudent('${student.id}')" class="bg-ios-blue text-white px-3 py-1 rounded-xl text-xs font-semibold active:scale-95 transition">
+                  Bayar SPP
+                </button>
+              ` : `
+                <span class="text-[11px] font-medium text-ios-grayLight">Selesai ✓</span>
+              `}
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function clearSearchInput() {
+      const input = document.getElementById('studentSearchInput');
+      input.value = '';
+      document.getElementById('clearSearchBtn').classList.add('hidden');
+      renderStudentList();
+    }
+
+    // --- 4. TAHUN AJARAN LOGIC ---
+    function updateAcademicYearBadges() {
+      document.getElementById('activeAcademicYearBadge').textContent = activeYear;
+      document.getElementById('activeYearLabelBtn').textContent = activeYear;
+      document.getElementById('settingsYearSummary').textContent = `Aktif: ${activeYear}`;
+    }
+
+    function openManageYearModal() {
+      renderAcademicYearList();
+      document.getElementById('manageYearModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeManageYearModal() {
+      document.getElementById('manageYearModal').classList.add('hidden');
+    }
+
+    function renderAcademicYearList() {
+      const container = document.getElementById('academicYearList');
+      container.innerHTML = academicYears.map(y => {
+        const isActive = y === activeYear;
+        return `
+          <div class="flex items-center justify-between p-3 rounded-xl border ${isActive ? 'border-ios-blue bg-ios-blue/10' : 'border-ios-borderLight dark:border-ios-borderDark bg-ios-bgLight dark:bg-ios-cardDarkAlt'} cursor-pointer" onclick="setActiveAcademicYear('${y}')">
+            <div class="flex items-center space-x-2">
+              <i data-lucide="${isActive ? 'check-circle' : 'circle'}" class="w-4 h-4 ${isActive ? 'text-ios-blue' : 'text-ios-grayLight'}"></i>
+              <span class="text-xs font-bold ${isActive ? 'text-ios-blue' : 'text-black dark:text-white'}">Tahun Ajaran ${y}</span>
+            </div>
+            ${isActive ? '<span class="text-[10px] font-bold text-ios-blue uppercase tracking-wider">Sedang Aktif</span>' : ''}
+          </div>
+        `;
+      }).join('');
+      lucide.createIcons();
+    }
+
+    function setActiveAcademicYear(selectedYear) {
+      if (activeYear === selectedYear) return;
+      activeYear = selectedYear;
+      saveState();
+      closeManageYearModal();
+      renderAll();
+      addLog('YEAR', `Tahun ajaran aktif diubah ke ${selectedYear}`);
+      showToast(`Tahun ajaran aktif: ${selectedYear}`);
+    }
+
+    function addNewAcademicYear() {
+      const input = document.getElementById('newYearInput');
+      const val = input.value.trim();
+      if (!val) {
+        showToast('Masukkan tahun ajaran, misal 2027/2028');
+        return;
+      }
+      if (academicYears.includes(val)) {
+        showToast('Tahun ajaran sudah ada!');
+        return;
+      }
+      academicYears.push(val);
+      input.value = '';
+      saveState();
+      renderAcademicYearList();
+      addLog('YEAR', `Menambahkan tahun ajaran baru ${val}`);
+      showToast(`Tahun ajaran ${val} berhasil ditambahkan`);
+    }
+
+    // --- 5. PEMBAYARAN SPP ENGINE ---
+    function populateStudentDropdown() {
+      const select = document.getElementById('modalStudentSelect');
+      select.innerHTML = '<option value="">-- Pilih Siswa / NISN --</option>';
+      students.forEach(s => {
+        const opt = document.createElement('option');
+        opt.value = s.id;
+        opt.textContent = `${s.name} (${s.class}) - NISN: ${s.nisn}`;
+        select.appendChild(opt);
+      });
+    }
+
+    function openPaymentModal() {
+      document.getElementById('modalStudentSelect').value = '';
+      document.getElementById('modalStudentBadge').classList.add('hidden');
+      document.getElementById('modalBillingSection').classList.add('hidden');
+      document.getElementById('modalPaymentAmount').value = '';
+      document.getElementById('modalPaymentNotes').value = '';
+
+      const modal = document.getElementById('paymentModal');
+      const sheet = document.getElementById('paymentSheetContent');
+      modal.classList.remove('hidden');
+      setTimeout(() => {
+        sheet.classList.remove('translate-y-full');
+      }, 10);
+      lucide.createIcons();
+    }
+
+    function openPaymentForStudent(studentId) {
+      openPaymentModal();
+      document.getElementById('modalStudentSelect').value = studentId;
+      onStudentSelected(studentId);
+    }
+
+    function closePaymentModal() {
+      const sheet = document.getElementById('paymentSheetContent');
+      sheet.classList.add('translate-y-full');
+      setTimeout(() => {
+        document.getElementById('paymentModal').classList.add('hidden');
+      }, 250);
+    }
+
+    function onStudentSelected(studentId) {
+      const student = students.find(s => s.id === studentId);
+      const badge = document.getElementById('modalStudentBadge');
+      const billingSection = document.getElementById('modalBillingSection');
+      const checkboxesContainer = document.getElementById('modalMonthsCheckboxes');
+      const quickChipsContainer = document.getElementById('quickAmountChips');
+
+      if (!student) {
+        badge.classList.add('hidden');
+        billingSection.classList.add('hidden');
+        return;
+      }
+
+      if (!student.paidRecords) student.paidRecords = {};
+      if (!student.paidRecords[activeYear]) student.paidRecords[activeYear] = [];
+
+      const paidThisYear = student.paidRecords[activeYear];
+      const fee = student.monthlyFee || 150000;
+      const unpaidMonths = MONTHS_TEMPLATE.filter(m => !paidThisYear.includes(m.id));
+      const totalDue = unpaidMonths.length * fee;
+
+      document.getElementById('badgeStudentName').textContent = student.name;
+      document.getElementById('badgeStudentMeta').textContent = `${student.class} • NISN: ${student.nisn}`;
+      document.getElementById('badgeStudentDue').textContent = formatIDR(totalDue);
+      badge.classList.remove('hidden');
+
+      // Populate Quick Chips based on student's fee
+      quickChipsContainer.innerHTML = `
+        <button type="button" onclick="setQuickPaymentAmount(${fee * 1})" class="text-[11px] bg-ios-bgLight dark:bg-ios-cardDarkAlt px-2.5 py-1 rounded-lg font-semibold">${formatIDR(fee)} (1 Bln)</button>
+        <button type="button" onclick="setQuickPaymentAmount(${fee * 2})" class="text-[11px] bg-ios-bgLight dark:bg-ios-cardDarkAlt px-2.5 py-1 rounded-lg font-semibold">${formatIDR(fee * 2)} (2 Bln)</button>
+        <button type="button" onclick="setQuickPaymentAmount(${fee * 3})" class="text-[11px] bg-ios-bgLight dark:bg-ios-cardDarkAlt px-2.5 py-1 rounded-lg font-semibold">${formatIDR(fee * 3)} (3 Bln)</button>
+      `;
+
+      if (unpaidMonths.length === 0) {
+        checkboxesContainer.innerHTML = `<p class="text-xs text-ios-green font-semibold py-1">Semua tagihan untuk TA ${activeYear} sudah lunas! 🎉</p>`;
+        document.getElementById('modalPaymentAmount').value = 0;
+      } else {
+        checkboxesContainer.innerHTML = unpaidMonths.map((m, idx) => `
+          <label class="flex items-center justify-between text-xs p-2 rounded-xl bg-white dark:bg-ios-cardDark border border-ios-borderLight dark:border-ios-borderDark cursor-pointer">
+            <div class="flex items-center space-x-2">
+              <input type="checkbox" name="selectedMonths" value="${m.id}" data-name="${m.name}" data-amount="${fee}" onchange="syncAmountFromCheckboxes()" class="rounded text-ios-blue focus:ring-0 w-4 h-4" ${idx === 0 ? 'checked' : ''}>
+              <span class="font-semibold">${m.name}</span>
+            </div>
+            <span class="font-bold text-ios-grayLight dark:text-ios-grayDark">${formatIDR(fee)}</span>
+          </label>
+        `).join('');
+
+        document.getElementById('modalPaymentAmount').value = fee;
+      }
+
+      billingSection.classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function syncAmountFromCheckboxes() {
+      const checkedBoxes = document.querySelectorAll('input[name="selectedMonths"]:checked');
+      let total = 0;
+      checkedBoxes.forEach(cb => {
+        total += parseInt(cb.dataset.amount || 150000);
+      });
+      document.getElementById('modalPaymentAmount').value = total;
+    }
+
+    function setQuickPaymentAmount(amount) {
+      document.getElementById('modalPaymentAmount').value = amount;
+      const boxes = document.querySelectorAll('input[name="selectedMonths"]');
+      let running = amount;
+      boxes.forEach(cb => {
+        const itemFee = parseInt(cb.dataset.amount || 150000);
+        if (running >= itemFee) {
+          cb.checked = true;
+          running -= itemFee;
+        } else {
+          cb.checked = false;
+        }
+      });
+    }
+
+    function processPayment() {
+      const studentId = document.getElementById('modalStudentSelect').value;
+      const amount = parseInt(document.getElementById('modalPaymentAmount').value || 0);
+      const notes = document.getElementById('modalPaymentNotes').value.trim() || 'Pembayaran SPP';
+      const method = document.querySelector('input[name="payMethod"]:checked').value;
+
+      if (!studentId) {
+        showToast('Pilih siswa terlebih dahulu!');
+        return;
+      }
+      if (amount <= 0) {
+        showToast('Nominal bayar harus lebih dari Rp 0!');
+        return;
+      }
+
+      const student = students.find(s => s.id === studentId);
+      const checkedBoxes = document.querySelectorAll('input[name="selectedMonths"]:checked');
+      let selectedMonthIds = [];
+      let selectedMonthNames = [];
+
+      checkedBoxes.forEach(cb => {
+        selectedMonthIds.push(cb.value);
+        selectedMonthNames.push(cb.dataset.name);
+      });
+
+      // FIFO Fallback if no box is checked
+      if (selectedMonthIds.length === 0) {
+        const fee = student.monthlyFee || 150000;
+        const paidThisYear = student.paidRecords[activeYear] || [];
+        const unpaidMonths = MONTHS_TEMPLATE.filter(m => !paidThisYear.includes(m.id));
+        let remaining = amount;
+        for (const m of unpaidMonths) {
+          if (remaining >= fee) {
+            selectedMonthIds.push(m.id);
+            selectedMonthNames.push(m.name);
+            remaining -= fee;
+          }
+        }
+      }
+
+      if (selectedMonthIds.length === 0) {
+        showToast('Nominal tidak cukup untuk 1 bulan SPP!');
+        return;
+      }
+
+      // Update student record for active academic year
+      if (!student.paidRecords[activeYear]) student.paidRecords[activeYear] = [];
+      student.paidRecords[activeYear].push(...selectedMonthIds);
+      student.paidRecords[activeYear] = [...new Set(student.paidRecords[activeYear])];
+
+      // Create new transaction
+      let txId;
+      do { txId = 'TX-' + Math.floor(1000 + Math.random() * 9000); } while (transactions.some(t => t.id === txId));
+      const dateString = localStamp(16);
+
+      const newTx = {
+        id: txId,
+        academicYear: activeYear,
+        studentId: student.id,
+        studentName: student.name,
+        class: student.class,
+        date: dateString,
+        amount: amount,
+        method: method,
+        months: selectedMonthNames,
+        notes: notes
+      };
+
+      transactions.unshift(newTx);
+      addLog('PAYMENT', `Pembayaran ${txId} (${student.name} - ${formatIDR(amount)}) via ${method}`);
+      saveState();
+
+      closePaymentModal();
+      renderAll();
+      showToast(`Pembayaran ${formatIDR(amount)} berhasil!`);
+
+      setTimeout(() => {
+        showReceiptModal(txId);
+      }, 250);
+    }
+
+    // --- 6. STRUK DIGITAL ---
+    function showReceiptModal(txId) {
+      const tx = transactions.find(t => t.id === txId);
+      if (!tx) return;
+
+      const student = students.find(s => s.id === tx.studentId);
+      const paidCount = (student && student.paidRecords && student.paidRecords[tx.academicYear || activeYear]) ? student.paidRecords[tx.academicYear || activeYear].length : 0;
+      const unpaidCount = MONTHS_TEMPLATE.length - paidCount;
+      const fee = student ? (student.monthlyFee || 150000) : 150000;
+      const remainingDue = unpaidCount * fee;
+
+      document.getElementById('recTxId').textContent = tx.id;
+      document.getElementById('recDate').textContent = tx.date;
+      document.getElementById('recStudent').textContent = `${tx.studentName} (${student ? student.nisn : '-'})`;
+      document.getElementById('recClass').textContent = `${tx.class} • TA ${tx.academicYear || activeYear}`;
+      document.getElementById('recMethod').textContent = tx.method;
+      document.getElementById('recTotal').textContent = formatIDR(tx.amount);
+      document.getElementById('recRemainingDue').textContent = formatIDR(remainingDue);
+
+      const itemsContainer = document.getElementById('recItems');
+      itemsContainer.innerHTML = tx.months.map(m => `
+        <div class="flex justify-between">
+          <span>SPP Bulan ${m}</span>
+          <span>${formatIDR(fee)}</span>
+        </div>
+      `).join('');
+
+      document.getElementById('receiptModal').classList.remove('hidden');
+      lucide.createIcons();
+    }
+
+    function closeReceiptModal() {
+      document.getElementById('receiptModal').classList.add('hidden');
+    }
+
+    // --- 7. RIWAYAT TRANSAKSI VIEW ---
+    function renderFullTransactions() {
+      const container = document.getElementById('fullTransactionList');
+      const filtered = transactions.filter(t => currentFilterMethod === 'ALL' || t.method === currentFilterMethod);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-xs text-ios-grayLight dark:text-ios-grayDark">Tidak ada riwayat transaksi pada filter ini.</div>`;
+        return;
+      }
+
+      container.innerHTML = filtered.map(tx => `
+        <div class="p-3.5 flex items-center justify-between hover:bg-black/5 dark:hover:bg-white/5 transition cursor-pointer active:bg-black/10" onclick="showReceiptModal('${tx.id}')">
+          <div class="flex items-center space-x-3 overflow-hidden">
+            <div class="w-9 h-9 rounded-xl ${tx.method === 'Tunai' ? 'bg-ios-green/15 text-ios-green' : tx.method === 'QRIS' ? 'bg-ios-orange/15 text-ios-orange' : 'bg-ios-blue/15 text-ios-blue'} flex items-center justify-center shrink-0">
+              <i data-lucide="${tx.method === 'Tunai' ? 'banknote' : tx.method === 'QRIS' ? 'qr-code' : 'building-2'}" class="w-4 h-4"></i>
+            </div>
+            <div class="truncate">
+              <p class="text-xs font-bold truncate text-black dark:text-white">${esc(tx.studentName)}</p>
+              <p class="text-[10px] text-ios-grayLight dark:text-ios-grayDark">${esc(tx.date)} • ${esc(tx.method)}</p>
+              <p class="text-[10px] text-ios-blue truncate">${esc(tx.months.join(', '))}</p>
+            </div>
+          </div>
+          <div class="text-right shrink-0">
+            <span class="text-xs font-bold text-black dark:text-white block">${formatIDR(tx.amount)}</span>
+            <span class="text-[10px] text-ios-grayLight font-mono">${tx.id}</span>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function filterPaymentMethod(method) {
+      currentFilterMethod = method;
+      document.querySelectorAll('.method-filter-chip').forEach(btn => {
+        if (btn.dataset.method === method) {
+          btn.classList.add('bg-ios-blue', 'text-white');
+          btn.classList.remove('bg-white', 'dark:bg-ios-cardDark', 'text-black', 'dark:text-white', 'border');
+        } else {
+          btn.classList.remove('bg-ios-blue', 'text-white');
+          btn.classList.add('bg-white', 'dark:bg-ios-cardDark', 'text-black', 'dark:text-white', 'border');
+        }
+      });
+      renderFullTransactions();
+      lucide.createIcons();
+    }
+
+    function exportCSV() {
+      if (transactions.length === 0) {
+        showToast('Tidak ada transaksi untuk diekspor!');
+        return;
+      }
+      let csv = 'ID Transaksi,Tahun Ajaran,Waktu,Nama Siswa,Kelas,Metode,Bulan,Nominal\n';
+      transactions.forEach(t => {
+        csv += `"${t.id}","${t.academicYear || activeYear}","${t.date}","${t.studentName}","${t.class}","${t.method}","${t.months.join(';')}",${t.amount}\n`;
+      });
+
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.setAttribute('href', url);
+      link.setAttribute('download', `Rekap_SPP_${activeYear.replace('/', '-')}_${new Date().toISOString().substring(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+
+      addLog('EXPORT', 'Mengunduh rekap transaksi format CSV');
+      showToast('File CSV berhasil diunduh');
+    }
+
+    // --- 8. DIAGNOSTIK & LOGS AUDIT ---
+    function updateDiagnostics() {
+      // 1. Calculate Storage size in LocalStorage
+      const totalChars = (localStorage.getItem('siakad_students') || '').length +
+                         (localStorage.getItem('siakad_txs') || '').length +
+                         (localStorage.getItem('siakad_logs') || '').length;
+      const sizeKb = (totalChars / 1024).toFixed(1);
+      document.getElementById('diagStorageSize').textContent = `${sizeKb} KB`;
+
+      // 2. Count entities
+      document.getElementById('diagTotalStudents').textContent = `${students.length} Siswa`;
+      document.getElementById('diagTotalPayments').textContent = `${transactions.length} Entri`;
+
+      // 3. Balance verification
+      let target = 0;
+      let realisasi = 0;
+      students.forEach(s => {
+        const fee = s.monthlyFee || 150000;
+        target += fee * MONTHS_TEMPLATE.length;
+        const paidCount = (s.paidRecords && s.paidRecords[activeYear]) ? s.paidRecords[activeYear].length : 0;
+        realisasi += paidCount * fee;
+      });
+      const due = Math.max(0, target - realisasi);
+
+      document.getElementById('diagMathTarget').textContent = formatIDR(target);
+      document.getElementById('diagMathPaid').textContent = `- ${formatIDR(realisasi)}`;
+      document.getElementById('diagMathDue').textContent = formatIDR(due);
+    }
+
+    function renderLogs() {
+      const container = document.getElementById('systemLogsList');
+      if (activityLogs.length === 0) {
+        container.innerHTML = `<div class="text-center text-ios-grayLight py-3 text-xs">Belum ada catatan log aktivitas.</div>`;
+        return;
+      }
+
+      container.innerHTML = activityLogs.map(log => {
+        let badgeColor = 'text-ios-blue bg-ios-blue/15';
+        if (log.type === 'PAYMENT') badgeColor = 'text-ios-green bg-ios-green/15';
+        if (log.type === 'STUDENT') badgeColor = 'text-ios-purple bg-ios-purple/15';
+        if (log.type === 'MASTER' || log.type === 'YEAR') badgeColor = 'text-ios-orange bg-ios-orange/15';
+
+        return `
+          <div class="p-2.5 rounded-xl bg-ios-bgLight dark:bg-ios-cardDarkAlt border border-ios-borderLight/40 dark:border-ios-borderDark/40">
+            <div class="flex items-center justify-between text-[10px] mb-1">
+              <span class="px-1.5 py-0.5 rounded font-bold ${badgeColor}">${log.type}</span>
+              <span class="text-ios-grayLight dark:text-ios-grayDark">${log.time}</span>
+            </div>
+            <p class="text-black dark:text-white text-xs break-words">${esc(log.msg)}</p>
+          </div>
+        `;
+      }).join('');
+    }
+
+    // --- Toast Notification Helper ---
+    function showToast(msg) {
+      const toast = document.getElementById('toastNotification');
+      document.getElementById('toastMessage').textContent = msg;
+      toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
+      toast.classList.add('opacity-100', 'translate-y-0');
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
+        toast.classList.remove('opacity-100', 'translate-y-0');
+      }, 2600);
+    }
+  </script>
+</body>
+</html>

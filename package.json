@@ -1,0 +1,20 @@
+{
+  "name": "rekap-spp",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "build": "node build.js",
+    "dev": "node build.js && npx wrangler dev",
+    "deploy": "node build.js && npx wrangler deploy"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "lucide": "^0.468.0",
+    "lucide-static": "^0.468.0",
+    "tailwindcss": "^3.4.17"
+  },
+  "private": true
+}
