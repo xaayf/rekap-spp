@@ -24,8 +24,6 @@
       max-width: 100vw;
       overflow-x: hidden;
       -webkit-tap-highlight-color: transparent;
-      padding-top: env(safe-area-inset-top);
-      padding-bottom: env(safe-area-inset-bottom);
     }
 
     .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
@@ -74,7 +72,7 @@
 <body class="h-full bg-ios-bgLight dark:bg-ios-bgDark text-[#1C1C1E] dark:text-[#F2F2F7] flex flex-col antialiased transition-colors duration-200">
 
   <!-- ================= TOP iOS STATUS & HEADER ================= -->
-  <header class="sticky top-0 z-30 bg-ios-bgLight/85 dark:bg-ios-bgDark/85 backdrop-blur-xl border-b border-[#D1D1D6]/60 dark:border-ios-borderDark/60 transition-colors">
+  <header style="padding-top: env(safe-area-inset-top)" class="sticky top-0 z-30 bg-ios-bgLight/85 dark:bg-ios-bgDark/85 backdrop-blur-xl border-b border-[#D1D1D6]/60 dark:border-ios-borderDark/60 transition-colors">
     <div class="max-w-md mx-auto px-4 pt-3 pb-3 flex items-center justify-between">
       
       <!-- Brand & Active Year info -->
@@ -107,7 +105,7 @@
   </header>
 
   <!-- ================= MAIN CONTAINER ================= -->
-  <main class="flex-1 w-full max-w-md mx-auto pb-28 px-4 pt-3 overflow-x-hidden">
+  <main style="padding-bottom: calc(7rem + env(safe-area-inset-bottom))" class="flex-1 w-full max-w-md mx-auto px-4 pt-3 overflow-x-hidden">
     
     <!-- ================= 1. VIEW BERANDA (DASHBOARD METRIK SAJA) ================= -->
     <section id="view-dashboard" class="space-y-4">
@@ -354,10 +352,10 @@
             </div>
             <div>
               <p class="font-bold text-black dark:text-white text-xs">Lebar Kertas Printer</p>
-              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark">Printer thermal Bluetooth</p>
+              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark">Untuk PDF & Bluetooth</p>
             </div>
           </div>
-          <div class="flex rounded-lg overflow-hidden border border-ios-borderLight dark:border-ios-borderDark text-[11px] font-semibold">
+          <div class="flex shrink-0 rounded-lg overflow-hidden border border-ios-borderLight dark:border-ios-borderDark text-[11px] font-semibold">
             <button id="paper58" onclick="setPaper('58')" class="px-2.5 py-1">58 mm</button>
             <button id="paper80" onclick="setPaper('80')" class="px-2.5 py-1">80 mm</button>
           </div>
@@ -369,8 +367,8 @@
               <i data-lucide="printer" class="w-4 h-4"></i>
             </div>
             <div>
-              <p class="font-bold text-black dark:text-white text-xs">Hubungkan & Tes Cetak</p>
-              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark">Pilih printer Bluetooth lalu cetak contoh</p>
+              <p class="font-bold text-black dark:text-white text-xs" id="testPrintTitle">Tes Cetak</p>
+              <p class="text-[11px] text-ios-grayLight dark:text-ios-grayDark" id="testPrintDesc">Cetak struk contoh</p>
             </div>
           </div>
           <i data-lucide="chevron-right" class="w-4 h-4 text-ios-grayLight"></i>
@@ -469,7 +467,7 @@
   </main>
 
   <!-- ================= FIXED BOTTOM TAB BAR (iOS Human Interface Guidelines) ================= -->
-  <nav class="fixed bottom-0 left-0 right-0 z-30 bg-[#F9F9FB]/95 dark:bg-[#161618]/95 backdrop-blur-xl border-t border-[#D1D1D6]/70 dark:border-ios-borderDark/70 shadow-lg transition-colors">
+  <nav style="padding-bottom: env(safe-area-inset-bottom)" class="fixed bottom-0 left-0 right-0 z-30 bg-[#F9F9FB]/95 dark:bg-[#161618]/95 backdrop-blur-xl border-t border-[#D1D1D6]/70 dark:border-ios-borderDark/70 shadow-lg transition-colors">
     <div class="max-w-md mx-auto grid grid-cols-4 h-14">
       
       <!-- Tab 1: Dashboard Metrik -->
@@ -501,7 +499,7 @@
 
   <!-- ================= MODAL: INPUT PEMBAYARAN SPP ================= -->
   <div id="paymentModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
-    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet max-h-[92vh] flex flex-col sheet-transition transform translate-y-full text-[#1C1C1E] dark:text-[#F2F2F7]" id="paymentSheetContent">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-ios-sheet max-h-[92vh] flex flex-col sheet-transition transform translate-y-full text-[#1C1C1E] dark:text-[#F2F2F7]" id="paymentSheetContent">
       
       <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
 
@@ -611,7 +609,7 @@
 
   <!-- ================= MODAL: TAMBAH SISWA BARU ================= -->
   <div id="addStudentModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
-    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
       <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
 
       <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
@@ -659,7 +657,7 @@
 
   <!-- ================= MODAL: TAMBAH KELAS ================= -->
   <div id="addClassModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
-    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
       <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
 
       <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
@@ -690,7 +688,7 @@
 
   <!-- ================= MODAL: KELOLA MASTER KELAS LIST ================= -->
   <div id="manageClassesListModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
-    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col max-h-[85vh] text-[#1C1C1E] dark:text-[#F2F2F7]">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-ios-sheet flex flex-col max-h-[85vh] text-[#1C1C1E] dark:text-[#F2F2F7]">
       <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
 
       <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
@@ -718,7 +716,7 @@
 
   <!-- ================= MODAL: KELOLA TAHUN AJARAN ================= -->
   <div id="manageYearModal" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm hidden flex items-end sm:items-center justify-center">
-    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
+    <div class="w-full max-w-md bg-white dark:bg-ios-cardDark rounded-t-3xl sm:rounded-3xl p-5 pb-[calc(1.25rem+env(safe-area-inset-bottom))] shadow-ios-sheet flex flex-col text-[#1C1C1E] dark:text-[#F2F2F7]">
       <div class="w-10 h-1 bg-[#D1D1D6] dark:bg-ios-borderDark rounded-full mx-auto mb-3 sm:hidden"></div>
 
       <div class="flex items-center justify-between pb-3 border-b border-ios-borderLight dark:border-ios-borderDark">
@@ -805,15 +803,15 @@
 
       <!-- Actions -->
       <div class="mt-4 space-y-2">
-        <button onclick="printReceiptBluetooth()" class="w-full bg-ios-blue text-white rounded-xl py-2.5 font-semibold text-xs active:scale-95 transition flex items-center justify-center space-x-1.5">
-          <i data-lucide="bluetooth" class="w-3.5 h-3.5"></i>
-          <span>Cetak via Bluetooth</span>
+        <button onclick="shareReceiptPdf()" class="w-full bg-ios-blue text-white rounded-xl py-2.5 font-semibold text-xs active:scale-95 transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="share" class="w-3.5 h-3.5"></i>
+          <span>Kirim PDF ke Printer (OpenLabel)</span>
         </button>
-        <div class="grid grid-cols-3 gap-2">
-          <button onclick="shareReceipt()" class="bg-ios-bgLight dark:bg-ios-cardDarkAlt hover:bg-black/5 text-black dark:text-white rounded-xl py-2.5 font-semibold text-[11px] flex items-center justify-center space-x-1 active:scale-95 transition">
-            <i data-lucide="share" class="w-3.5 h-3.5"></i>
-            <span>Bagikan</span>
-          </button>
+        <button id="btnBluetooth" onclick="printReceiptBluetooth()" class="hidden w-full bg-ios-bgLight dark:bg-ios-cardDarkAlt text-black dark:text-white rounded-xl py-2.5 font-semibold text-xs active:scale-95 transition flex items-center justify-center space-x-1.5">
+          <i data-lucide="bluetooth" class="w-3.5 h-3.5"></i>
+          <span>Cetak langsung via Bluetooth</span>
+        </button>
+        <div class="grid grid-cols-2 gap-2">
           <button onclick="window.print()" class="bg-ios-bgLight dark:bg-ios-cardDarkAlt hover:bg-black/5 text-black dark:text-white rounded-xl py-2.5 font-semibold text-[11px] flex items-center justify-center space-x-1 active:scale-95 transition">
             <i data-lucide="printer" class="w-3.5 h-3.5"></i>
             <span>AirPrint</span>
@@ -840,9 +838,9 @@
   </div>
 
   <!-- ================= INLINE TOAST BANNER (iOS NOTIFICATION) ================= -->
-  <div id="toastNotification" class="fixed top-3 left-1/2 -translate-x-1/2 z-50 bg-[#1C1C1E]/95 dark:bg-white/95 text-white dark:text-[#1C1C1E] px-4 py-2.5 rounded-2xl shadow-xl flex items-center space-x-2 text-xs font-semibold transition-all duration-300 opacity-0 pointer-events-none -translate-y-4">
-    <i data-lucide="check-circle" class="w-4 h-4 text-ios-green"></i>
-    <span id="toastMessage">Operasi Berhasil</span>
+  <div id="toastNotification" style="top: calc(env(safe-area-inset-top) + 10px)" class="fixed left-1/2 -translate-x-1/2 z-50 w-max max-w-[88vw] bg-[#1C1C1E]/95 dark:bg-white/95 text-white dark:text-[#1C1C1E] px-4 py-2.5 rounded-2xl shadow-xl flex items-center space-x-2 text-xs font-semibold leading-snug transition-all duration-300 opacity-0 pointer-events-none -translate-y-4">
+    <i data-lucide="check-circle" class="w-4 h-4 text-ios-green shrink-0"></i>
+    <span id="toastMessage" class="text-left">Operasi Berhasil</span>
   </div>
 
   <!-- ================= JAVASCRIPT APPLICATION CORE ================= -->
@@ -1790,7 +1788,7 @@
       ['58', '80'].forEach(v => {
         const b = document.getElementById('paper' + v);
         if (!b) return;
-        b.className = 'px-2.5 py-1 ' + (paperMm === v ? 'bg-ios-blue text-white' : 'bg-transparent text-ios-grayLight');
+        b.className = 'px-2.5 py-1 whitespace-nowrap ' + (paperMm === v ? 'bg-ios-blue text-white' : 'bg-transparent text-ios-grayLight');
       });
     }
     window.addEventListener('load', applyPaperUI);
@@ -1897,7 +1895,7 @@
 
     async function runBluetoothPrint(receipt, hintFn) {
       if (!navigator.bluetooth) {
-        hintFn('Browser ini belum mendukung Bluetooth langsung (Safari & Chrome iPhone memang belum). Pakai tombol Bagikan untuk kirim struk ke aplikasi printer, atau buka app ini lewat browser Bluefy (iPhone) / Chrome Android.');
+        hintFn('Browser ini belum mendukung Bluetooth langsung. Pakai tombol Kirim PDF, lalu pilih OpenLabel di menu bagikan.');
         return;
       }
       try {
@@ -1917,49 +1915,81 @@
     }
 
     function testPrint() {
-      runBluetoothPrint({
+      const sample = {
         id: 'TES-0001', date: localStamp(16), student: 'Contoh Siswa', nisn: '0000000000', kelas: 'X IPA 1',
         ta: activeYear, method: 'Tunai', items: [{ label: 'SPP Juli', amount: 150000 }], total: 150000, remaining: 1500000
-      }, showToast);
+      };
+      if (navigator.bluetooth) runBluetoothPrint(sample, showToast);
+      else shareReceiptPdf(sample);
     }
 
-    // Gambar struk (PNG) untuk dibagikan ke aplikasi printer / WhatsApp
-    function receiptPngBlob(r) {
-      const cols = 32, W = 576, pad = 24;
-      const cv = document.createElement('canvas'); const ctx = cv.getContext('2d');
+    // PDF struk (vektor, font Courier bawaan PDF) -> dibagikan ke OpenLabel / app printer lain
+    function receiptPdfBlob(r) {
+      const mm = paperMm === '80' ? 80 : 58;
+      const cols = paperCols();
+      const W = +(mm * 72 / 25.4).toFixed(2);                 // lebar halaman (pt) = lebar kertas
+      const margin = (mm === 80 ? 11 : 14);
+      const fs = +((W - margin * 2) / (cols * 0.6)).toFixed(2); // Courier: lebar huruf 0.6 em
+      const cw = fs * 0.6, lh = fs * 1.5;
       const lines = buildReceiptLines(r, cols);
-      let fs = 26; ctx.font = `${fs}px Menlo, Consolas, "Courier New", monospace`;
-      fs = Math.floor(fs * (W - pad * 2) / (cols * ctx.measureText('M').width));
-      const lh = Math.round(fs * 1.35);
-      cv.width = W; cv.height = pad * 2 + lines.length * lh;
-      ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, cv.width, cv.height);
-      ctx.fillStyle = '#000'; ctx.textBaseline = 'top';
-      lines.forEach((l, i) => {
-        ctx.font = `${l.b ? 'bold ' : ''}${fs}px Menlo, Consolas, "Courier New", monospace`;
-        const tw = ctx.measureText(l.t).width;
-        const x = l.a === 'c' ? (W - tw) / 2 : pad;
-        ctx.fillText(l.t, x, pad + i * lh);
+      const top = 12, bottom = 40;
+      const H = +(top + lines.reduce((a, l) => a + lh * (l.h ? 1.6 : 1), 0) + bottom).toFixed(2);
+      const esc = t => toAscii(t).replace(/([\\()])/g, '\\$1');
+      let y = H - top, content = '';
+      lines.forEach(l => {
+        const mult = l.h ? 1.6 : 1;
+        y -= lh * mult;
+        const x = l.a === 'c' ? (W - toAscii(l.t).length * cw) / 2 : margin;
+        content += `BT /${l.b ? 'F2' : 'F1'} ${fs} Tf 1 0 0 ${mult} ${x.toFixed(2)} ${(y + lh * 0.25).toFixed(2)} Tm (${esc(l.t)}) Tj ET\n`;
       });
-      return new Promise(res => cv.toBlob(res, 'image/png'));
+      const objs = [
+        '<< /Type /Catalog /Pages 2 0 R >>',
+        '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+        `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${W} ${H}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> /Contents 4 0 R >>`,
+        `<< /Length ${content.length} >>\nstream\n${content}endstream`,
+        '<< /Type /Font /Subtype /Type1 /BaseFont /Courier /Encoding /WinAnsiEncoding >>',
+        '<< /Type /Font /Subtype /Type1 /BaseFont /Courier-Bold /Encoding /WinAnsiEncoding >>'
+      ];
+      let pdf = '%PDF-1.4\n'; const off = [];
+      objs.forEach((o, i) => { off.push(pdf.length); pdf += `${i + 1} 0 obj\n${o}\nendobj\n`; });
+      const xref = pdf.length;
+      pdf += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n` + off.map(o => String(o).padStart(10, '0') + ' 00000 n \n').join('');
+      pdf += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+      return new Blob([pdf], { type: 'application/pdf' });
     }
 
-    async function shareReceipt() {
-      if (!currentReceipt) return;
+    async function shareReceiptPdf(r) {
+      r = r || currentReceipt;
+      if (!r) return;
       try {
-        const blob = await receiptPngBlob(currentReceipt);
-        const file = new File([blob], `Struk-${currentReceipt.id}.png`, { type: 'image/png' });
+        const blob = receiptPdfBlob(r);
+        const file = new File([blob], `Struk-${r.id}.pdf`, { type: 'application/pdf' });
         if (navigator.canShare && navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: 'Struk ' + currentReceipt.id });
+          await navigator.share({ files: [file], title: 'Struk ' + r.id });
         } else {
+          const url = URL.createObjectURL(blob);
           const a = document.createElement('a');
-          a.href = URL.createObjectURL(blob); a.download = file.name;
+          a.href = url; a.download = file.name;
           document.body.appendChild(a); a.click(); a.remove();
-          showToast('Struk disimpan sebagai gambar');
+          setTimeout(() => URL.revokeObjectURL(url), 60000);
+          showToast('Struk disimpan sebagai PDF');
         }
       } catch (e) {
-        if (!e || e.name !== 'AbortError') showToast('Gagal membagikan struk');
+        if (!e || e.name !== 'AbortError') showToast('Gagal membuat PDF struk');
       }
     }
+
+    // Tombol Bluetooth & teks pengaturan menyesuaikan dukungan browser
+    window.addEventListener('load', () => {
+      const hasBt = !!navigator.bluetooth;
+      const btn = document.getElementById('btnBluetooth');
+      if (btn && hasBt) btn.classList.remove('hidden');
+      const t = document.getElementById('testPrintTitle'), d = document.getElementById('testPrintDesc');
+      if (t && d) {
+        t.textContent = hasBt ? 'Hubungkan & Tes Cetak' : 'Tes Cetak PDF';
+        d.textContent = hasBt ? 'Pilih printer Bluetooth lalu cetak contoh' : 'Buat struk contoh, kirim ke OpenLabel';
+      }
+    });
 
     // --- 7. RIWAYAT TRANSAKSI VIEW ---
     function renderFullTransactions() {
@@ -2084,16 +2114,17 @@
     }
 
     // --- Toast Notification Helper ---
+    let toastTimer = null;
     function showToast(msg) {
       const toast = document.getElementById('toastNotification');
       document.getElementById('toastMessage').textContent = msg;
       toast.classList.remove('opacity-0', 'pointer-events-none', '-translate-y-4');
       toast.classList.add('opacity-100', 'translate-y-0');
-
-      setTimeout(() => {
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(() => {
         toast.classList.add('opacity-0', 'pointer-events-none', '-translate-y-4');
         toast.classList.remove('opacity-100', 'translate-y-0');
-      }, 2600);
+      }, Math.min(9000, Math.max(2600, String(msg).length * 55)));
     }
   </script>
 </body>
