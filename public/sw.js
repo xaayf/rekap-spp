@@ -1,8 +1,8 @@
 // Service worker Rekap SPP.
-// - Halaman: tampil dari cache dulu (instan), update di belakang layar.
-// - Aset: cache-first. Respons redirect TIDAK pernah disimpan/disajikan.
-// Naikkan VERSION tiap rilis supaya cache lama dibuang.
-const VERSION = 'rekap-spp-v2';
+// BUILD diisi otomatis saat build -> sw.js berubah tiap rilis -> browser mendeteksi pembaruan.
+// Versi baru menunggu (waiting) sampai pengguna menekan "Perbarui" di app.
+const BUILD = '__BUILD__';
+const VERSION = 'rekap-spp-' + BUILD;
 const ASSETS = ['/', '/app.css', '/icons.js', '/manifest.webmanifest',
   '/icons/icon-192.png', '/icons/icon-512.png', '/icons/apple-touch-icon.png', '/icons/favicon-32.png'];
 
@@ -22,8 +22,12 @@ self.addEventListener('install', e => {
         if (r.ok) await c.put(u, await clean(r));
       } catch (_) {}
     }));
-    await self.skipWaiting();
+    // tidak skipWaiting: tunggu pengguna menekan tombol Perbarui
   })());
+});
+
+self.addEventListener('message', e => {
+  if (e.data === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
@@ -37,26 +41,18 @@ self.addEventListener('fetch', e => {
   const req = e.request;
   if (req.method !== 'GET' || new URL(req.url).origin !== location.origin) return;
 
-  if (req.mode === 'navigate') {
-    e.respondWith((async () => {
-      const cache = await caches.open(VERSION);
-      const cached = await cache.match('/');
-      const refresh = fetch('/', { cache: 'no-cache' })
-        .then(async r => { if (r.ok) await cache.put('/', await clean(r)); return r; })
-        .catch(() => null);
-      if (cached) { e.waitUntil(refresh); return cached; }
-      const r = await refresh;
-      return r ? clean(r) : new Response('Offline', { status: 503 });
-    })());
-    return;
-  }
-
+  // Semua dari cache versi ini (HTML + aset selalu satu versi). Jaringan hanya cadangan.
   e.respondWith((async () => {
     const cache = await caches.open(VERSION);
-    const hit = await cache.match(req);
+    const key = req.mode === 'navigate' ? '/' : req;
+    const hit = await cache.match(key);
     if (hit) return hit;
-    const res = await fetch(req);
-    if (res.ok) cache.put(req, res.clone());
-    return res;
+    try {
+      const res = await fetch(req);
+      if (res.ok && req.mode !== 'navigate') cache.put(req, res.clone());
+      return req.mode === 'navigate' ? clean(res) : res;
+    } catch (_) {
+      return new Response('Offline', { status: 503 });
+    }
   })());
 });
